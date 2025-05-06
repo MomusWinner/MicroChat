@@ -8,16 +8,20 @@ import (
 	"os/signal"
 
 	"github.com/MomusWinner/MicroChat/internal/proxyproto"
+	"github.com/MomusWinner/MicroChat/services/permissions-service/internal/config"
 	"github.com/MomusWinner/MicroChat/services/permissions-service/internal/service"
 	"google.golang.org/grpc"
 )
 
-const (
-	ConnString = "postgres://appuser:apppass@127.0.0.1:5432/userdb?sslmode=disable"
-)
-
 func main() {
-	listener, err := net.Listen("tcp4", "127.0.0.1:10000")
+	log.Print("Start App")
+	conf, err := config.Load()
+
+	if err != nil {
+		panic(err)
+	}
+
+	listener, err := net.Listen("tcp4", ":10000")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -26,7 +30,13 @@ func main() {
 
 	srv := grpc.NewServer()
 
-	svc, err := service.New(ConnString)
+	svc, err := service.New(conf)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Print(svc)
 
 	proxyproto.RegisterCentrifugoProxyServer(srv, svc)
 
@@ -58,5 +68,4 @@ func main() {
 	case <-exitCtx.Done():
 		log.Println("exit")
 	}
-
 }

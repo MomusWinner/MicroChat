@@ -25,6 +25,15 @@ WHERE "user_channel"."chan_id"=$1
 ;
 
 -- name: UserCanSubscribe :one
-
+SELECT count(*)
+FROM "public"."user_channel" uc
+JOIN "public"."channel" c on c.id = uc.chan_id
+WHERE uc.user_id = $1 and c.channel = $2
+;
 
 -- name: UserCanPublish :one
+SELECT count(*)
+FROM "public"."user_channel" uc
+JOIN "public"."channel" c on c.id = uc.chan_id
+WHERE uc.user_id = $1 and c.channel = $2 and can_publish = true
+;

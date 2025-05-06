@@ -8,6 +8,32 @@ services:
       - ./web:/var/www/web
       - ./config/balancer:/etc/nginx/templates
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 127.0.0.1:10000:10000
+    environment:
+      APP_DATABASE_URL: "postgres://${DB_USER}:${DB_PASS}@database:5432/${DB_NAME}"
+      APP_KEYCLOAK_URL: "http://keycloak:8080"
+      APP_CLOAK_CLIENT_ID: "back"
+      APP_CLOAK_REALM: "sirius"
+      APP_CLOAK_SECRET: "SdwAcwLDLbvdS6jQoWrU4eJKWelPv7VG"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    depends_on:
+      database:
+        condition: service_healthy
+    command: ["-source=file://migrations", "-database",  "postgres://test:test@database:5432/test_db?sslmode=disable", "up"]
+    restart: on-failure
+
   websocket:
     image: centrifugo/centrifugo:v6.1
     restart: unless-stopped
@@ -24,6 +50,11 @@ services:
   database:
     image: postgres:17.4-alpine3.21
     restart: unless-stopped
+    healthcheck:
+        test: [ "CMD", "pg_isready", "-U", "${DB_USER}", "-d", "${DB_NAME}" ]
+        interval: 1s
+        timeout: 1s
+        retries: 60
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASS}
